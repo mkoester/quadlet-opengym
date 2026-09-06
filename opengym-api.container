@@ -1,0 +1,44 @@
+[Unit]
+Description=openGym API — passkey auth and per-user workout data
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=registry.gitlab.com/duartesantos8/opengym/api:1.3
+AutoUpdate=registry
+
+# NO UserNS/User/Group on purpose — this deviates from the template.
+# The image declares no USER (verified: image config "User" is null), so it runs
+# as root *inside* the container. Under rootless podman that maps to the host's
+# opengym user, which is exactly what we want: files written into ~opengym/data
+# come out owned by opengym. Adding UserNS=keep-id would map the host uid to the
+# same uid inside and container-root would then NOT be opengym — the data dir
+# would end up owned by a subuid instead.
+
+Network=opengym.network
+ContainerName=opengym-api
+
+# Environment variables
+EnvironmentFile=%h/.config/containers/systemd/opengym.env
+EnvironmentFile=%h/.config/containers/systemd/opengym.override.env
+
+# All state: users, passkeys, workouts, audit.log, vapid.json — BACK THIS UP.
+# DATA_DIR is pinned to /data by the image; change the host side, not the value.
+Volume=%h/data:/data:Z
+
+# Not published — only the web container talks to it, over opengym.network.
+
+# Health check — same command the image's own HEALTHCHECK uses (wget, not curl:
+# the image is Alpine-based and has busybox wget, not curl). Only the interval
+# differs: the image ships 5m, which is too coarse to notice a wedged API.
+HealthCmd=wget --spider -q http://127.0.0.1:3000/api/health || exit 1
+HealthInterval=30s
+HealthTimeout=10s
+HealthRetries=3
+
+[Service]
+Restart=always
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target

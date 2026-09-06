@@ -1,0 +1,26 @@
+[Unit]
+Description=openGym one-time exercise media download (~140 MB)
+After=network-online.target
+Wants=network-online.target
+# Skip once the download has completed. A unit whose condition is not met counts
+# as successfully started, so opengym-web.service's Requires= is still satisfied
+# on every boot after the first.
+ConditionPathExists=!%h/media/.download-complete
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Mirrors the `media` init container in upstream's docker-compose.yml. The images
+# and GIFs are (c) Gym visual, used under the exercises-dataset terms — openGym
+# neither redistributes nor relicenses them, and neither does this repo; they are
+# fetched from upstream at deploy time. See NOTICE.md in the openGym repo.
+ExecStart=/usr/bin/podman run --rm --name opengym-media \
+    -v %h/media/img:/out/img:z \
+    -v %h/media/gif:/out/gif:z \
+    docker.io/alpine/git:latest \
+    sh -c 'git clone --depth 1 https://github.com/hasaneyldrm/exercises-dataset /tmp/ds && cp /tmp/ds/images/*.jpg /out/img/ && cp /tmp/ds/videos/*.gif /out/gif/'
+ExecStartPost=/usr/bin/touch %h/media/.download-complete
+TimeoutStartSec=1800
+
+[Install]
+WantedBy=default.target

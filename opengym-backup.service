@@ -1,0 +1,17 @@
+[Unit]
+Description=openGym backup (data directory — users, passkeys, workouts, audit log)
+
+[Service]
+Type=oneshot
+# openGym keeps everything as plain JSON files under /data; there is no database
+# to dump, and upstream's documented backup is a tar of that directory.
+#
+# ~opengym/media is deliberately NOT backed up: it is ~140 MB of third-party
+# exercise images that opengym-media.service re-downloads from upstream, and it
+# is not ours to redistribute. Nor is ~opengym/coach-auth (absent here — the
+# default image carries no AI runtime).
+#
+# Taken while the API is running. These are small JSON files rewritten in place,
+# so a torn read is possible in principle; restoring one day older is the
+# mitigation, and matches what upstream documents.
+ExecStart=/bin/sh -c '/usr/bin/tar czf /var/backups/opengym/opengym-data.tar.gz -C %h data'
