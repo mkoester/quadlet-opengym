@@ -254,6 +254,26 @@ curl -fsS https://gym.example.com/api/health
 
 ## Notes
 
+- **⚠ The web image's nginx proxies `/api` through DOCKER's DNS, so `BACKEND` here
+  is an IP, not a container name** (found on the first deploy, 2026-09-07).
+  `web/nginx.conf.template` hardcodes `resolver 127.0.0.11 valid=10s ipv6=off;`
+  and reaches the API through a *variable* `proxy_pass`, which forces per-request
+  DNS. Podman's aardvark-dns listens on the network gateway, not on Docker's
+  `127.0.0.11`, so every `/api/` request 502s. `BACKEND`/`PORT` are envsubst
+  placeholders in that template; the resolver address is not, so no env setting
+  fixes it. **Everything about the symptom points elsewhere** — both containers
+  report `(healthy)` because the web healthcheck probes `/` (static, no
+  resolver); `podman exec opengym-web wget -qO- http://opengym-api:3000/api/health`
+  succeeds, because `/etc/resolv.conf` is correct and nginx's `resolver`
+  directive ignores it (and `/etc/hosts`); and Caddy returns a 502 that reads as
+  a Caddy or upstream-down problem. **Only `podman logs opengym-web` names it:**
+  `resolver: 127.0.0.11:53 … Connection refused`. The fix is a pinned
+  `Subnet=`/`Gateway=` in `opengym.network`, `IP=` on `opengym-api.container`,
+  and `BACKEND` set to that address — an IP literal makes nginx skip DNS
+  entirely. Deliberately *not* a bind-mounted copy of their patched template:
+  `AutoUpdate=registry` would let a newer image drift away from the copy
+  silently. Worth reporting upstream — that image's `/api` proxy cannot work
+  under rootless Podman as shipped.
 - **`opengym-media` needs `--entrypoint sh` — an image's ENTRYPOINT silently eats
   your command** (found on the first deploy, 2026-09-07). `docker.io/alpine/git`
   declares `ENTRYPOINT ["git"]`, so `podman run … alpine/git sh -c '…'` runs

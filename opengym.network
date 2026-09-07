@@ -1,1 +1,10 @@
 [Network]
+# Subnet and gateway are PINNED, not left to podman's allocator, because
+# opengym-api.container pins IP= out of this range and opengym.env's BACKEND
+# names that address literally. See the BACKEND comment in opengym.env for why
+# the wiring is an IP here rather than a container name.
+#
+# These are the values podman had already auto-assigned (it allocates 10.89.0.0/24
+# first for this user), so pinning them renumbers nothing on an existing install.
+Subnet=10.89.0.0/24
+Gateway=10.89.0.1

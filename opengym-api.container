@@ -18,6 +18,12 @@ AutoUpdate=registry
 Network=opengym.network
 ContainerName=opengym-api
 
+# PINNED IP — the web container's nginx reaches the API at this literal address
+# (opengym.env: BACKEND). Podman's allocator hands out .2, .3, … sequentially, so
+# .10 stays clear of it. The subnet is pinned in opengym.network to match.
+# Full reasoning in the BACKEND comment in opengym.env.
+IP=10.89.0.10
+
 # Environment variables
 EnvironmentFile=%h/.config/containers/systemd/opengym.env
 EnvironmentFile=%h/.config/containers/systemd/opengym.override.env
