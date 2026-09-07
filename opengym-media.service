@@ -14,11 +14,16 @@ RemainAfterExit=yes
 # and GIFs are (c) Gym visual, used under the exercises-dataset terms — openGym
 # neither redistributes nor relicenses them, and neither does this repo; they are
 # fetched from upstream at deploy time. See NOTICE.md in the openGym repo.
+# --entrypoint sh is load-bearing: docker.io/alpine/git declares ENTRYPOINT ["git"],
+# so without it podman runs `git sh -c '…'`, git takes `sh` as a subcommand it does
+# not have, prints "The most similar commands are / show / push / …" and exits 1.
+# The failure reads as a broken download script, not as a wrong entrypoint.
 ExecStart=/usr/bin/podman run --rm --name opengym-media \
+    --entrypoint sh \
     -v %h/media/img:/out/img:z \
     -v %h/media/gif:/out/gif:z \
     docker.io/alpine/git:latest \
-    sh -c 'git clone --depth 1 https://github.com/hasaneyldrm/exercises-dataset /tmp/ds && cp /tmp/ds/images/*.jpg /out/img/ && cp /tmp/ds/videos/*.gif /out/gif/'
+    -c 'git clone --depth 1 https://github.com/hasaneyldrm/exercises-dataset /tmp/ds && cp /tmp/ds/images/*.jpg /out/img/ && cp /tmp/ds/videos/*.gif /out/gif/'
 ExecStartPost=/usr/bin/touch %h/media/.download-complete
 TimeoutStartSec=1800
 

@@ -234,8 +234,9 @@ Each of these fails visibly if the thing it checks is broken:
 # API answers, and reports itself healthy
 curl -fsS http://127.0.0.1:8085/api/health          # => {"ok":true,...}
 
-# The media actually landed (expect a few hundred, not zero)
+# The media actually landed (expect ~1000 jpg and ~1000 gif, not zero)
 sudo -u opengym ls ~opengym/media/img | wc -l
+sudo -u opengym ls ~opengym/media/gif | wc -l
 
 # Both containers are healthy, not merely running
 sudo -u opengym XDG_RUNTIME_DIR=/run/user/$(id -u opengym) podman ps --format '{{.Names}} {{.Status}}'
@@ -249,6 +250,19 @@ curl -fsS https://gym.example.com/api/health
 
 ## Notes
 
+- **`opengym-media` needs `--entrypoint sh` — an image's ENTRYPOINT silently eats
+  your command** (found on the first deploy, 2026-09-07). `docker.io/alpine/git`
+  declares `ENTRYPOINT ["git"]`, so `podman run … alpine/git sh -c '…'` runs
+  `git sh -c '…'`: git takes `sh` as a subcommand, prints *"The most similar
+  commands are"* with a tab-indented list, and exits 1. In the journal that
+  surfaces as a few bare words (`show`, `push`) with no error line near them, so
+  it reads as a broken download script rather than a wrong entrypoint. The unit's
+  `ConditionPathExists=!` guard means it retries on every boot, so the failure
+  repeats rather than latching. **Check `Entrypoint` before writing any
+  `podman run <image> sh -c` line** — the registry answers it without a pull:
+  fetch an anonymous token, `GET /v2/<repo>/manifests/<tag>` with the OCI index
+  Accept headers, then `curl -sL` the config blob (the `-L` matters; the blob is
+  a redirect).
 - **Notifications** (rest-timer and workout-day push) need no server-side setup:
   VAPID keys are generated on first run into `data/vapid.json`. They require a
   signed-in profile and HTTPS.
