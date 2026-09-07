@@ -234,7 +234,11 @@ Each of these fails visibly if the thing it checks is broken:
 # API answers, and reports itself healthy
 curl -fsS http://127.0.0.1:8085/api/health          # => {"ok":true,...}
 
-# The media actually landed (expect ~1000 jpg and ~1000 gif, not zero)
+# The media actually landed. Measured 2026-09-07: 1324 in each, and the two
+# counts MATCHING matters — the dataset is one gif per jpg, so a mismatch means
+# one of the two cp's was partial. Check this now: ExecStartPost has already
+# created .download-complete, so ConditionPathExists=! will skip the unit on
+# every future boot and a partial copy would latch silently.
 sudo -u opengym ls ~opengym/media/img | wc -l
 sudo -u opengym ls ~opengym/media/gif | wc -l
 
