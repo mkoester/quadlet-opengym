@@ -272,8 +272,17 @@ curl -fsS https://gym.example.com/api/health
   and `BACKEND` set to that address — an IP literal makes nginx skip DNS
   entirely. Deliberately *not* a bind-mounted copy of their patched template:
   `AutoUpdate=registry` would let a newer image drift away from the copy
-  silently. Worth reporting upstream — that image's `/api` proxy cannot work
-  under rootless Podman as shipped.
+  silently. Reported upstream 2026-09-09 on
+  [issue #69](https://gitlab.com/DuarteSantos8/opengym/-/issues/69), which another
+  Podman user had already opened; a fix is also already in flight as
+  [!110](https://gitlab.com/DuarteSantos8/opengym/-/merge_requests/110)
+  (`ENV RESOLVER=`, from the Kubernetes side). A second option exists that needs no
+  configuration at all: the `nginx:alpine` image ships
+  `/docker-entrypoint.d/15-local-resolvers.envsh`, which exports
+  `NGINX_LOCAL_RESOLVERS` from the container's own `/etc/resolv.conf` when
+  `NGINX_ENTRYPOINT_LOCAL_RESOLVERS` is set — verified present in the running
+  `opengym-web`. **Keep the pinned IP regardless**: it makes the recreate-drift
+  case behind upstream's `#16` structurally impossible rather than merely fixed.
 - **`opengym-media` needs `--entrypoint sh` — an image's ENTRYPOINT silently eats
   your command** (found on the first deploy, 2026-09-07). `docker.io/alpine/git`
   declares `ENTRYPOINT ["git"]`, so `podman run … alpine/git sh -c '…'` runs
