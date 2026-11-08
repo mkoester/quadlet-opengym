@@ -3,6 +3,7 @@ Description=openGym backup (data directory — users, passkeys, workouts, audit 
 
 [Service]
 Type=oneshot
+UMask=0027
 # openGym keeps everything as plain JSON files under /data; there is no database
 # to dump, and upstream's documented backup is a tar of that directory.
 #

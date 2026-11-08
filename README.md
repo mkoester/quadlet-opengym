@@ -199,17 +199,19 @@ then `daemon-reload` and restart. Releases are announced on
 ## Backup
 
 Follows the shared convention: `/var/backups/opengym/` owned
-`opengym:backup-readers`, mode `2750`, pulled offsite by `backupuser`.
+`opengym:backup-readers`, mode `2750`, read access for `backup-readers` via a default ACL,
+pulled offsite by `backupuser`.
 
 `data/` is the whole of the state — users, passkeys, workouts, `audit.log` and
 `vapid.json` — as plain JSON. `media/` is deliberately excluded: it is
 third-party content that `opengym-media.service` re-downloads.
 
 ```sh
-# Create backup staging directory (setgid so the group is inherited)
+# Create backup staging directory (setgid + default ACL for backup-readers)
 sudo mkdir -p /var/backups/opengym
 sudo chown opengym:backup-readers /var/backups/opengym
 sudo chmod 2750 /var/backups/opengym
+sudo setfacl -R -m g:backup-readers:rX,d:g:backup-readers:rX /var/backups/opengym
 
 # Symlink backup units from the repo
 sudo -u opengym ln -s $REPO/opengym-backup.service ~opengym/.config/systemd/user/opengym-backup.service
